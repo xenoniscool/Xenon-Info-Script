@@ -1,0 +1,206 @@
+local Plr = game.Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+
+local DataFolder = RS:WaitForChild("Data"):WaitForChild(Plr.Name)
+local Str = DataFolder:WaitForChild("Strength")
+
+local StrCounterGUI = Instance.new("ScreenGui")
+StrCounterGUI.Name = "XenonsStrengthGauge"
+StrCounterGUI.IgnoreGuiInset = true
+StrCounterGUI.ResetOnSpawn = true
+StrCounterGUI.Parent = Plr:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Position = UDim2.new(0.33,0,0.4,0)
+MainFrame.Size = UDim2.new(0,340,0,200)
+MainFrame.BackgroundColor3 = Color3.new(0,0,0)
+MainFrame.BorderSizePixel = 2
+MainFrame.Parent = StrCounterGUI
+
+local InnerFrame = Instance.new("Frame")
+InnerFrame.Size = UDim2.new(1,-4,1,-4)
+InnerFrame.Position = UDim2.new(0,2,0,2)
+InnerFrame.BackgroundColor3 = Color3.new(1,1,1)
+InnerFrame.BorderSizePixel = 0
+InnerFrame.Parent = MainFrame
+
+local Gradient = Instance.new("UIGradient")
+Gradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255,50,50)),
+	ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255,0,0)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0))
+}
+Gradient.Rotation = 45
+Gradient.Parent = InnerFrame
+
+local TopTxt = Instance.new("TextLabel")
+TopTxt.BackgroundTransparency = 1
+TopTxt.Position = UDim2.new(0.05,0,0.03,0)
+TopTxt.Size = UDim2.new(0.9,0,0.12,0)
+TopTxt.Text = "Xenon Info Script V2"
+TopTxt.TextColor3 = Color3.new(1,1,1)
+TopTxt.Font = Enum.Font.GothamBold
+TopTxt.TextSize = 20
+TopTxt.TextStrokeTransparency = 0
+TopTxt.Parent = InnerFrame
+
+task.wait(1)
+pcall(function()
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "Xenon Info Script V2",
+		Text = "BEST INFO SCRIPT",
+		Duration = 5
+	})
+end)
+
+local function formatNumberWithCommas(num)
+	local formatted = tostring(math.floor(num))
+	local k
+	repeat
+		formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", "%1,%2")
+	until k == 0
+	return formatted
+end
+
+local function abbreviateNumber(num)
+	local absNum = math.abs(num)
+	if absNum < 1e3 then
+		return tostring(num)
+	elseif absNum < 1e6 then
+		return string.format("%.1fK", num / 1e3):gsub("%.0K","K")
+	elseif absNum < 1e9 then
+		return string.format("%.1fM", num / 1e6):gsub("%.0M","M")
+	elseif absNum < 1e12 then
+		return string.format("%.1fB", num / 1e9):gsub("%.0B","B")
+	elseif absNum < 1e15 then
+		return string.format("%.1fT", num / 1e12):gsub("%.0T","T")
+	else
+		return tostring(num)
+	end
+end
+
+local StrTxt = Instance.new("TextLabel")
+StrTxt.BackgroundTransparency = 1
+StrTxt.Position = UDim2.new(0.05,0,0.18,0)
+StrTxt.Size = UDim2.new(0.9,0,0.14,0)
+StrTxt.Font = Enum.Font.GothamBold
+StrTxt.TextColor3 = Color3.new(1,1,1)
+StrTxt.TextSize = 22
+StrTxt.TextStrokeTransparency = 0
+StrTxt.Parent = InnerFrame
+
+local ShortTxt = Instance.new("TextLabel")
+ShortTxt.BackgroundTransparency = 1
+ShortTxt.Position = UDim2.new(0.05,0,0.32,0)
+ShortTxt.Size = UDim2.new(0.9,0,0.1,0)
+ShortTxt.Font = Enum.Font.GothamBold
+ShortTxt.TextColor3 = Color3.new(1,1,1)
+ShortTxt.TextSize = 18
+ShortTxt.TextStrokeTransparency = 0
+ShortTxt.Parent = InnerFrame
+
+local GainTxt = Instance.new("TextLabel")
+GainTxt.BackgroundTransparency = 1
+GainTxt.Position = UDim2.new(0.05,0,0.44,0)
+GainTxt.Size = UDim2.new(0.9,0,0.36,0)
+GainTxt.Font = Enum.Font.GothamBold
+GainTxt.TextColor3 = Color3.new(1,1,1)
+GainTxt.TextSize = 16
+GainTxt.TextStrokeTransparency = 0
+GainTxt.TextWrapped = true
+GainTxt.TextYAlignment = Enum.TextYAlignment.Top
+GainTxt.Parent = InnerFrame
+
+local EarnedTxt = Instance.new("TextLabel")
+EarnedTxt.BackgroundTransparency = 1
+EarnedTxt.Position = UDim2.new(0.05,0,0.82,0)
+EarnedTxt.Size = UDim2.new(0.9,0,0.14,0)
+EarnedTxt.Font = Enum.Font.GothamBold
+EarnedTxt.TextColor3 = Color3.new(1,1,1)
+EarnedTxt.TextSize = 18
+EarnedTxt.TextStrokeTransparency = 0
+EarnedTxt.TextWrapped = true
+EarnedTxt.Parent = InnerFrame
+
+local lastValue = Str.Value
+local lastTime = tick()
+local spsSmooth = 0
+local displaySPS, displaySPM, displaySPH, displaySPD = 0,0,0,0
+local earnedStrength = 0
+local prevStrength = Str.Value
+local updateInterval = 1
+
+local function updateNumbers()
+	local now = tick()
+	local deltaTime = now - lastTime
+
+	local currentStrength = Str.Value
+	local gained = currentStrength - prevStrength
+	if gained > 0 then
+		earnedStrength += gained
+	end
+	prevStrength = currentStrength
+
+	local deltaStr = currentStrength - lastValue
+	local instantSPS = math.max(0, deltaStr / math.max(deltaTime, 0.001))
+	spsSmooth = spsSmooth * 0.8 + instantSPS * 0.2
+
+	if deltaTime >= updateInterval then
+		displaySPS = math.floor(spsSmooth)
+		displaySPM = displaySPS * 60
+		displaySPH = displaySPS * 3600
+		displaySPD = displaySPS * 86400
+		lastTime = now
+		lastValue = currentStrength
+	end
+
+	StrTxt.Text = "Strength: "..formatNumberWithCommas(currentStrength)
+	ShortTxt.Text = "("..abbreviateNumber(currentStrength)..")"
+	EarnedTxt.Text = "Earned: "..formatNumberWithCommas(earnedStrength)
+		.." ("..abbreviateNumber(earnedStrength)..")"
+
+	GainTxt.Text = string.format(
+		"SPS: %s (%s)\nSPM: %s (%s)\nSPH: %s (%s)\nSPD: %s (%s)",
+		formatNumberWithCommas(displaySPS), abbreviateNumber(displaySPS),
+		formatNumberWithCommas(displaySPM), abbreviateNumber(displaySPM),
+		formatNumberWithCommas(displaySPH), abbreviateNumber(displaySPH),
+		formatNumberWithCommas(displaySPD), abbreviateNumber(displaySPD)
+	)
+end
+
+task.spawn(function()
+	while true do
+		updateNumbers()
+		task.wait(0.1)
+	end
+end)
+
+local dragToggle, dragStart, startPos
+
+local function updateInput(input)
+	local delta = input.Position - dragStart
+	MainFrame.Position = UDim2.new(
+		startPos.X.Scale, startPos.X.Offset + delta.X,
+		startPos.Y.Scale, startPos.Y.Offset + delta.Y
+	)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragToggle = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragToggle = false
+			end
+		end)
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragToggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		updateInput(input)
+	end
+end)
