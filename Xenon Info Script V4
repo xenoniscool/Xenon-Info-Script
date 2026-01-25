@@ -1,0 +1,373 @@
+local Plr = game.Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local Stats = game:GetService("Stats")
+
+local DataFolder = RS:WaitForChild("Data"):WaitForChild(Plr.Name)
+local Str = DataFolder:WaitForChild("Strength")
+local sessionStart = os.time()
+
+local StrCounterGUI = Instance.new("ScreenGui")
+StrCounterGUI.Name = "XenonsStrengthGauge"
+StrCounterGUI.IgnoreGuiInset = true
+StrCounterGUI.ResetOnSpawn = true
+StrCounterGUI.Parent = Plr:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Position = UDim2.new(0.33,0,0.4,0)
+MainFrame.Size = UDim2.new(0,340,0,200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10,10,10)
+MainFrame.BorderSizePixel = 2
+MainFrame.Parent = StrCounterGUI
+
+local InnerFrame = Instance.new("Frame")
+InnerFrame.Size = UDim2.new(1,-4,1,-4)
+InnerFrame.Position = UDim2.new(0,2,0,2)
+InnerFrame.BackgroundColor3 = Color3.new(1,1,1)
+InnerFrame.BorderSizePixel = 0
+InnerFrame.Parent = MainFrame
+
+local Gradient = Instance.new("UIGradient")
+Gradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(120,60,255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(60,140,255))
+}
+Gradient.Rotation = 45
+Gradient.Parent = InnerFrame
+
+local TopTxt = Instance.new("TextLabel")
+TopTxt.BackgroundTransparency = 1
+TopTxt.Position = UDim2.new(0.05,0,0.03,0)
+TopTxt.Size = UDim2.new(0.9,0,0.12,0)
+TopTxt.Text = "Xenon Info Script V4"
+TopTxt.TextColor3 = Color3.new(1,1,1)
+TopTxt.Font = Enum.Font.FredokaOne
+TopTxt.TextSize = 20
+TopTxt.TextStrokeTransparency = 0
+TopTxt.Parent = InnerFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0,26,0,26)
+CloseBtn.Position = UDim2.new(0,6,0,6)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(120,0,0)
+CloseBtn.BorderSizePixel = 2
+CloseBtn.BorderColor3 = Color3.fromRGB(120,80,255)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.Font = Enum.Font.FredokaOne
+CloseBtn.TextSize = 18
+CloseBtn.Parent = InnerFrame
+CloseBtn.MouseButton1Click:Connect(function()
+	StrCounterGUI:Destroy()
+end)
+
+pcall(function()
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "Xenon Info Script V4",
+		Text = "BEST INFO SCRIPT",
+		Duration = 5
+	})
+end)
+
+local StrTxt = Instance.new("TextLabel")
+StrTxt.BackgroundTransparency = 1
+StrTxt.Position = UDim2.new(0.05,0,0.2,0)
+StrTxt.Size = UDim2.new(0.9,0,0.12,0)
+StrTxt.Font = Enum.Font.FredokaOne
+StrTxt.TextColor3 = Color3.new(1,1,1)
+StrTxt.TextSize = 22
+StrTxt.TextStrokeTransparency = 0
+StrTxt.Parent = InnerFrame
+
+local ShortTxt = Instance.new("TextLabel")
+ShortTxt.BackgroundTransparency = 1
+ShortTxt.Position = UDim2.new(0.05,0,0.32,0)
+ShortTxt.Size = UDim2.new(0.9,0,0.08,0)
+ShortTxt.Font = Enum.Font.FredokaOne
+ShortTxt.TextColor3 = Color3.new(1,1,1)
+ShortTxt.TextSize = 18
+ShortTxt.TextStrokeTransparency = 0
+ShortTxt.Parent = InnerFrame
+
+local GainTxt = Instance.new("TextLabel")
+GainTxt.BackgroundTransparency = 1
+GainTxt.Position = UDim2.new(0.05,0,0.45,0)
+GainTxt.Size = UDim2.new(0.9,0,0.5,0)
+GainTxt.Font = Enum.Font.FredokaOne
+GainTxt.TextColor3 = Color3.new(1,1,1)
+GainTxt.TextSize = 16
+GainTxt.TextStrokeTransparency = 0
+GainTxt.TextWrapped = true
+GainTxt.TextYAlignment = Enum.TextYAlignment.Top
+GainTxt.Parent = InnerFrame
+
+local function formatNumberWithCommas(num)
+	local s = tostring(math.floor(num))
+	repeat
+		s, k = s:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+	until k == 0
+	return s
+end
+
+local function abbreviateNumber(num)
+	local a = math.abs(num)
+	if a < 1e3 then
+		return tostring(math.floor(num))
+	elseif a < 1e6 then
+		return string.format("%.2fK", num/1e3):gsub("%.00K","K")
+	elseif a < 1e9 then
+		return string.format("%.2fM", num/1e6):gsub("%.00M","M")
+	elseif a < 1e12 then
+		return string.format("%.2fB", num/1e9):gsub("%.00B","B")
+	elseif a < 1e15 then
+		return string.format("%.2fT", num/1e12):gsub("%.00T","T")
+	else
+		return tostring(num)
+	end
+end
+
+local lastStrength = Str.Value
+local earnedStrength = 0
+local lastSecondGain = 0
+
+task.spawn(function()
+	while true do
+		local current = Str.Value
+		local delta = current - lastStrength
+		if delta > 0 then
+			earnedStrength += delta
+			lastSecondGain += delta
+		end
+		StrTxt.Text = "Strength: "..formatNumberWithCommas(current)
+		ShortTxt.Text = "("..abbreviateNumber(current)..")"
+		lastStrength = current
+		task.wait(0.1)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		GainTxt.Text = string.format(
+			"SPS: %s (%s)\nSPM: %s (%s)\nSPH: %s (%s)\nSPD: %s (%s)\nSPW: %s (%s)",
+			formatNumberWithCommas(lastSecondGain), abbreviateNumber(lastSecondGain),
+			formatNumberWithCommas(lastSecondGain*60), abbreviateNumber(lastSecondGain*60),
+			formatNumberWithCommas(lastSecondGain*3600), abbreviateNumber(lastSecondGain*3600),
+			formatNumberWithCommas(lastSecondGain*86400), abbreviateNumber(lastSecondGain*86400),
+			formatNumberWithCommas(lastSecondGain*604800), abbreviateNumber(lastSecondGain*604800)
+		)
+		lastSecondGain = 0
+		task.wait(1)
+	end
+end)
+
+local drag1, dragStart1, startPos1
+MainFrame.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		drag1 = true
+		dragStart1 = i.Position
+		startPos1 = MainFrame.Position
+		i.Changed:Connect(function()
+			if i.UserInputState == Enum.UserInputState.End then
+				drag1 = false
+			end
+		end)
+	end
+end)
+UIS.InputChanged:Connect(function(i)
+	if drag1 and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		local d = i.Position - dragStart1
+		MainFrame.Position = UDim2.new(startPos1.X.Scale, startPos1.X.Offset + d.X, startPos1.Y.Scale, startPos1.Y.Offset + d.Y)
+	end
+end)
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0,28,0,28)
+ToggleBtn.Position = UDim2.new(1,-34,0,6)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+ToggleBtn.BorderSizePixel = 2
+ToggleBtn.BorderColor3 = Color3.fromRGB(120,80,255)
+ToggleBtn.Text = ">"
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+ToggleBtn.Font = Enum.Font.FredokaOne
+ToggleBtn.TextSize = 18
+ToggleBtn.Parent = InnerFrame
+
+local Skyboxes = {
+	{Name="Blue Heaven", SkyboxBk="rbxassetid://159454299", SkyboxDn="rbxassetid://159454296", SkyboxFt="rbxassetid://159454293", SkyboxLf="rbxassetid://159454286", SkyboxRt="rbxassetid://159454300", SkyboxUp="rbxassetid://159454288"},
+	{Name="Purple Nebula", SkyboxBk="rbxassetid://433274085", SkyboxDn="rbxassetid://433274194", SkyboxFt="rbxassetid://433274131", SkyboxLf="rbxassetid://433274370", SkyboxRt="rbxassetid://433274429", SkyboxUp="rbxassetid://433274285"},
+	{Name="Red Night", SkyboxBk="rbxassetid://401664839", SkyboxDn="rbxassetid://401664862", SkyboxFt="rbxassetid://401664960", SkyboxLf="rbxassetid://401664881", SkyboxRt="rbxassetid://401664901", SkyboxUp="rbxassetid://401664936"},
+	{Name="Blue Night", SkyboxBk="rbxassetid://12064107", SkyboxDn="rbxassetid://12064152", SkyboxFt="rbxassetid://12064121", SkyboxLf="rbxassetid://12063984", SkyboxRt="rbxassetid://12064115", SkyboxUp="rbxassetid://12064131"},
+	{Name="Blossom Daylight", SkyboxBk="rbxassetid://271042516", SkyboxDn="rbxassetid://271077243", SkyboxFt="rbxassetid://271042556", SkyboxLf="rbxassetid://271042310", SkyboxRt="rbxassetid://271042467", SkyboxUp="rbxassetid://271077958"}
+}
+
+local currentSkyIndex = 1
+local function applySkybox(i)
+	if Lighting:FindFirstChild("ExecutorSky") then
+		Lighting.ExecutorSky:Destroy()
+	end
+	local d = Skyboxes[i]
+	local s = Instance.new("Sky")
+	s.Name = "ExecutorSky"
+	s.SkyboxBk = d.SkyboxBk
+	s.SkyboxDn = d.SkyboxDn
+	s.SkyboxFt = d.SkyboxFt
+	s.SkyboxLf = d.SkyboxLf
+	s.SkyboxRt = d.SkyboxRt
+	s.SkyboxUp = d.SkyboxUp
+	s.Parent = Lighting
+end
+applySkybox(currentSkyIndex)
+
+local SecondPage
+local pageOpen = false
+
+ToggleBtn.MouseButton1Click:Connect(function()
+	if pageOpen then
+		pageOpen = false
+		ToggleBtn.Text = ">"
+		if SecondPage then
+			SecondPage:Destroy()
+			SecondPage = nil
+		end
+		return
+	end
+
+	pageOpen = true
+	ToggleBtn.Text = "<"
+
+	SecondPage = Instance.new("Frame")
+	SecondPage.Size = UDim2.new(0,340,0,200)
+	SecondPage.Position = UDim2.new(0, MainFrame.Position.X.Offset + MainFrame.Size.X.Offset, MainFrame.Position.Y.Scale, MainFrame.Position.Y.Offset)
+	SecondPage.BackgroundColor3 = Color3.fromRGB(10,10,10)
+	SecondPage.BorderSizePixel = 2
+	SecondPage.Parent = StrCounterGUI
+
+	local InnerSecond = Instance.new("Frame")
+	InnerSecond.Size = UDim2.new(1,-4,1,-4)
+	InnerSecond.Position = UDim2.new(0,2,0,2)
+	InnerSecond.BackgroundColor3 = Color3.new(1,1,1)
+	InnerSecond.BorderSizePixel = 0
+	InnerSecond.Parent = SecondPage
+
+	local Gradient2 = Instance.new("UIGradient")
+	Gradient2.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(120,60,255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(60,140,255))
+	}
+	Gradient2.Rotation = 45
+	Gradient2.Parent = InnerSecond
+
+	local EarnedTxt = Instance.new("TextLabel")
+	EarnedTxt.BackgroundTransparency = 1
+	EarnedTxt.Size = UDim2.new(0.9,0,0.15,0)
+	EarnedTxt.Position = UDim2.new(0.05,0,0.03,0)
+	EarnedTxt.Font = Enum.Font.FredokaOne
+	EarnedTxt.TextColor3 = Color3.new(1,1,1)
+	EarnedTxt.TextSize = 20
+	EarnedTxt.TextStrokeTransparency = 0
+	EarnedTxt.TextXAlignment = Enum.TextXAlignment.Left
+	EarnedTxt.Parent = InnerSecond
+
+	local PingTxt = Instance.new("TextLabel")
+	PingTxt.BackgroundTransparency = 1
+	PingTxt.Size = UDim2.new(0.9,0,0.15,0)
+	PingTxt.Position = UDim2.new(0.05,0,0.21,0)
+	PingTxt.Font = Enum.Font.FredokaOne
+	PingTxt.TextSize = 20
+	PingTxt.TextColor3 = Color3.new(1,1,1)
+	PingTxt.TextStrokeTransparency = 0
+	PingTxt.TextXAlignment = Enum.TextXAlignment.Left
+	PingTxt.Parent = InnerSecond
+
+	local DWTxt = Instance.new("TextLabel")
+	DWTxt.BackgroundTransparency = 1
+	DWTxt.Size = UDim2.new(0.9,0,0.15,0)
+	DWTxt.Position = UDim2.new(0.05,0,0.39,0)
+	DWTxt.Font = Enum.Font.FredokaOne
+	DWTxt.TextSize = 20
+	DWTxt.TextColor3 = Color3.new(1,1,1)
+	DWTxt.TextStrokeTransparency = 0
+	DWTxt.TextXAlignment = Enum.TextXAlignment.Left
+	DWTxt.Parent = InnerSecond
+
+	local TimerTxt = Instance.new("TextLabel")
+	TimerTxt.BackgroundTransparency = 1
+	TimerTxt.Size = UDim2.new(0.9,0,0.15,0)
+	TimerTxt.Position = UDim2.new(0.05,0,0.57,0)
+	TimerTxt.Font = Enum.Font.FredokaOne
+	TimerTxt.TextSize = 20
+	TimerTxt.TextColor3 = Color3.new(1,1,1)
+	TimerTxt.TextStrokeTransparency = 0
+	TimerTxt.TextXAlignment = Enum.TextXAlignment.Left
+	TimerTxt.Parent = InnerSecond
+
+	local SkyBtn = Instance.new("TextButton")
+	SkyBtn.Size = UDim2.new(0,200,0,40)
+	SkyBtn.Position = UDim2.new(0.5,-100,0.75,0)
+	SkyBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	SkyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+	SkyBtn.Font = Enum.Font.FredokaOne
+	SkyBtn.TextSize = 18
+	SkyBtn.Text = "Skybox: "..Skyboxes[currentSkyIndex].Name
+	SkyBtn.Parent = InnerSecond
+
+	SkyBtn.MouseButton1Click:Connect(function()
+		currentSkyIndex += 1
+		if currentSkyIndex > #Skyboxes then currentSkyIndex = 1 end
+		applySkybox(currentSkyIndex)
+		SkyBtn.Text = "Skybox: "..Skyboxes[currentSkyIndex].Name
+	end)
+
+	task.spawn(function()
+		while SecondPage and SecondPage.Parent do
+			EarnedTxt.Text = "Earned: "..formatNumberWithCommas(earnedStrength).." ("..abbreviateNumber(earnedStrength)..")"
+			task.wait(0.1)
+		end
+	end)
+
+	task.spawn(function()
+		while SecondPage and SecondPage.Parent do
+			local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+			PingTxt.Text = "Ping: "..ping.." ms"
+
+			local DWs = 0
+			for _,v in pairs(workspace:GetDescendants()) do
+				if v:IsA("Model") and v:FindFirstChild("Owner") and v:FindFirstChild("Hitbox") and v.Owner.Value == Plr then
+					DWs += 1
+				end
+			end
+			DWTxt.Text = "DWs: "..DWs
+
+			local t = os.time() - sessionStart
+			local d = math.floor(t/86400)
+			local h = math.floor((t%86400)/3600)
+			local m = math.floor((t%3600)/60)
+			local s = t%60
+			TimerTxt.Text = string.format("Session Time: %dd %dh %dm %ds", d,h,m,s)
+
+			task.wait(1)
+		end
+	end)
+
+	local drag2, dragStart2, startPos2
+	SecondPage.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			drag2 = true
+			dragStart2 = i.Position
+			startPos2 = SecondPage.Position
+			i.Changed:Connect(function()
+				if i.UserInputState == Enum.UserInputState.End then
+					drag2 = false
+				end
+			end)
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(i)
+		if drag2 and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			local d = i.Position - dragStart2
+			SecondPage.Position = UDim2.new(startPos2.X.Scale, startPos2.X.Offset + d.X, startPos2.Y.Scale, startPos2.Y.Offset + d.Y)
+		end
+	end)
+end)
